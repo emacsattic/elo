@@ -38,6 +38,7 @@
 ;;; Code:
 
 (require 'auto-compile)
+(require 'ob-tangle)
 
 (defvar elo-ding t)
 
@@ -163,6 +164,9 @@
   ;; (feature &optional FILENAME NOERROR)
   "Before loading the library retangle it if needs to be retangled."
   (elo-tangle-on-load (or filename (symbol-name feature))))
+
+(defun elo-ding ()
+  (and elo-ding (ding)))
 
 (provide 'elo)
 ;;; elo.el ends here
