@@ -37,91 +37,112 @@
 
 ;;; Code:
 
-;; ??? Does it work with the released auto-compile
-;; or do we need this? (require 'packed)
-;; ??? Can we do without this?
 (require 'auto-compile)
-
-(defvar elo-byte-compile t)
 
 (defvar elo-ding t)
 
-
-;;; Locating Files.
+(defvar elo-load-suffixes '(".elo"))
 
-(defconst elo-load-suffixes '(".elc" ".el" ".elo" ".org"))
+(defvar elo-byte-compile t)
 
-;; TODO support the optional arguments
+(defun elo-file-p (file)
+  (string-match (concat (regexp-opt elo-load-suffixes) "$") file))
 
-(defun elo-locate-el (file &optional nosuffix path interactive-call)
-  )
+(defun elo-locate-elo (library &optional path)
+  (locate-file (substitute-in-file-name library)
+	       (or path load-path)
+	       (let ((load-suffixes elo-load-suffixes))
+		 (get-load-suffixes))))
 
-(defun elo-locate-elo (file)
-  )
-
-
-;;; Basic Tangling.
+(defun elo-locate-elo* (library &optional path)
+  (let* ((load-suffixes (cons ".elo" load-suffixes))
+	 (result (locate-library library)))
+    (when (elo-file-p result)
+      result)))
 
 (defun elo-tangle-file (elo &optional el)
-  (org-babel-tangle-file elo (or el (elo-locate-el elo)) "emacs-lisp")
-  ;; ??? Should we optionally byte-compile and generate autoloads
-  ;; here or is it okay to just depend on `auto-compile'?
+  (org-babel-tangle-file elo (or el (packed-source-file elo)) "emacs-lisp"))
+
+(defun elo-tangle-file*** (elo &optional nomessage noerror el)
+  (unless el
+    (setq el (packed-source-file elo)))
+  (when (or (not (file-exists-p el))
+	    (file-newer-than-file-p elo el))
+    (message "Loading %s (tangle)..." elo)
+    (org-babel-tangle-file elo el "emacs-lisp")
+    (message "Loading %s (tangle)...done" elo))
+  el)
+
+
+
+;;;###autoload
+(define-minor-mode elo-auto-tangle-mode
+  ""
+  :lighter elo-auto-tangle-mode-lighter
+  :group 'elo
+  (if elo-auto-tangle-mode
+      (add-hook  'after-save-hook 'elo-auto-tangle-file nil t)
+    (remove-hook 'after-save-hook 'elo-auto-tangle-file t))
+  ;; TODO mode-line
   )
 
-
-;;; Manual Tangling.
+;;;###autoload
+(define-globalized-minor-mode elo-auto-tangle-global-mode
+  elo-auto-tangle-mode turn-on-elo-auto-tangle-mode)
+
+(defun turn-on-elo-auto-tangle-mode ()
+  (and (eq major-mode 'org-mode)
+       nil ; TODO .elo suffix
+       (elo-auto-tangle-mode 1)))
+
+(defvar elo-auto-tangle-mode-lighter " Elo" ; TODO none once done
+  "Mode lighter for Elo-Auto-Tangle Mode.")
+
+;; TODO all kinds of error handling
+(defun elo-auto-tangle-file ()
+  (let ((elo (buffer-file-name)))
+    (elo-tangle-file elo)))
 
 
-;;; Automatic Tangling.
 
-(defun elo-tangle-on-load (file &optional nosuffix)
-  ;; ??? should we support nosuffix?
-  ;; ??? are these checks needed, why?
-  ;; ??? we doesn't `org-babel-load-file' use `file-newer-than-file-p'
-  ;; but it's one implementation.  Do we have to do the same?
-  (when (and (stringp file)
-	     (not (equal file "")))
-    (let ((el  (elo-locate-el  file))
-	  (elo (elo-locate-elo file nosuffix)))
-      (condition-case nil
-	  (when (and (file-exists-p elo)
-		     (or (not (file-exists-p el))
-			 (file-newer-than-file-p elo el)))
-	    (message "Retangling %s..." elo)
-	    (elo-tangle-file elo el)
-	    (message "Retangling %s...done" elo))
-	(error
-	 (message "Retangling %s...failed" elo)
-	 (elo-ding))))))
+;; FIXME only suitable for require not load at the moment
+(defun elo-tangle-on-load (file &optional nosuffix path)
+  ;; To keep it simple we don't support files with no suffix.
+  (unless nosuffix
+    (let* ((elo (elo-locate-elo file path))
+	   (el (and elo (packed-source-file elo))))
+      ;; (message "elo-tangle-on-load")
+      ;; (message "  file: %s" file)
+      ;; (message "  el:   %s" el)
+      ;; (message "  elo:  %s" elo)
+      (when (and elo
+		 (file-exists-p elo)
+		 (or (not (file-exists-p el))
+		     (file-newer-than-file-p elo el)))
+	(condition-case nil
+	    (progn
+	      ;; TODO use a tempory file in case of failure?
+	      (message "Retangling %s..." elo)
+	      (elo-tangle-file elo el)
+	      (message "Retangling %s...done" elo))
+	  (error
+	   (message "Retangling %s...failed" elo)
+	   (elo-ding)))
+	(auto-compile-byte-compile el elo-byte-compile)))))
 
-
-;;; Elo Load Variants.
-
-;; ??? Exactly like `load-file', do we need to change anything?
-(defun elo-load-file (file)
-  "Load the Lisp file named FILE."
-  ;; This is a case where .elc makes a lot of sense.
-  (interactive (list (let ((completion-ignored-extensions
-			    (remove ".elc" completion-ignored-extensions)))
-		       (read-file-name "Load file: "))))
-  (load (expand-file-name file) nil nil t))
-
-(defun elo-load (file &optional noerror nomessage nosuffix must-suffix)
-  )
+(defun elo-load (file &optional noerror nomessage)
+  (load (elo-tangle-on-load file) noerror nomessage))
 
 (defun elo-require (feature &optional filename noerror path)
   (elo-tangle-on-load (or filename (symbol-name feature)))
   (require feature filename noerror))
-
-
-;;; Elo-Tangle-On-Load Mode.
 
 (define-minor-mode elo-tangle-on-load-mode
   "Before loading a library retangle it if it needs retangling."
   :lighter elo-on-load-mode-lighter
   :group 'elo
   :global t
-  (if elo-on-load-mode
+  (if elo-tangle-on-load-mode
       (progn
 	(ad-enable-advice 'load    'before 'elo-tangle-on-load)
 	(ad-enable-advice 'require 'before 'elo-tangle-on-load)
@@ -130,7 +151,7 @@
     (ad-disable-advice 'load    'before 'elo-tangle-on-load)
     (ad-disable-advice 'require 'before 'elo-tangle-on-load)))
 
-(defvar elo-tangle-on-load-mode-lighter "elo"
+(defvar elo-tangle-on-load-mode-lighter ""
   "Mode lighter for Elo-Tangle-On-Load Mode.")
 
 (defadvice load (before elo-tangle-on-load disable)
@@ -142,26 +163,6 @@
   ;; (feature &optional FILENAME NOERROR)
   "Before loading the library retangle it if needs to be retangled."
   (elo-tangle-on-load (or filename (symbol-name feature))))
-
-
-;;; Utilities.
-
-(defun elo-ding ()
-  (when elo-ding (ding)))
-
-
-;;; Trash.
-
-;; XXX tempory
-(defun etc/require (feature)
-  (let ((full-feature (intern (concat "etc/" (symbol-name feature)))))
-    (unless (featurep full-feature)
-      (org-babel-load-file
-       (expand-file-name
-	(convert-standard-filename
-	 (concat (symbol-name feature) ".org"))
-	epkg-etc-directory)))
-    full-feature))
 
 (provide 'elo)
 ;;; elo.el ends here
