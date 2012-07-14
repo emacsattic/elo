@@ -40,52 +40,97 @@
 (require 'auto-compile)
 (require 'ob-tangle)
 
-(defvar elo-ding t)
+(add-to-list 'auto-mode-alist '("\\.elo\\'" . org-mode))
 
-(defvar elo-load-suffixes '(".elo"))
+(defgroup elo nil
+  "Support for Org Emacs Lisp files.
+Org Emacs Lisp files (.elo) are a third kind of Emacs Lisp files besides
+source files (.el) and byte compiled files (.elc)."
+  :group 'convenience
+  :prefix 'auto-compile)
 
-(defvar elo-byte-compile t)
+;; TODO
+(defcustom elo-byte-compile 'update-or-start
+  "Whether to byte compile generated Emacs lisp libraries."
+  :group 'elo
+  :type '(choice
+	  (const :tag "Always compile" always)
+	  (const :tag "Compile when the .elc file already exists." update)
+	  (const :tag "Compile when .elc exists or .el is first created."
+		 update-or-start)
+	  (const :tag "Don't compile")))
 
-(defun elo-file-p (file)
-  (string-match (concat (regexp-opt elo-load-suffixes) "$") file))
+(defcustom elo-ding t
+  "Whether to beep (or flash the screen) when an error occurs.
 
-(defun elo-locate-elo (library &optional path)
-  (locate-file (substitute-in-file-name library)
-	       (or path load-path)
-	       (let ((load-suffixes elo-load-suffixes))
-		 (get-load-suffixes))))
+Elo-Auto-Tangle mode continues after an errors occurs because aborting and
+therefor not processing the remaining files would be confusing.  Instead
+it continues and beeps or flashes the screen to get the users attention;
+set this variable to nil to disable even that."
+  :group 'elo
+  :type 'boolean)
 
-(defun elo-locate-elo* (library &optional path)
-  (let* ((load-suffixes (cons ".elo" load-suffixes))
-	 (result (locate-library library)))
-    (when (elo-file-p result)
-      result)))
+(defconst elo-load-suffixes '(".elo"))
+
+;; (define-key org-mode-map (kbd "<f6>") 'elo-experiment)
+(defun elo-experiment ()
+  (interactive)
+  (pp-eval-expression '(org-babel-tangle-collect-blocks))) ; "emacs-lisp")))
+
+(defun elo-load-suffixes ()
+  (let ((load-suffixes elo-load-suffixes))
+    (get-load-suffixes)))
+
+(defun elo-load-suffix-match-p (file)
+  (save-match-data
+    (string-match (concat (regexp-opt (elo-load-suffixes)) "\\'") file)))
+
+(defun elo-locate-elo (library &optional nosuffix path)
+  "Show the precise file name of Org Emacs library LIBRARY.
+If no such library exists or if it is shadowed by an .el or .elc file in
+a directory earlier in `load-path' return nil."
+  (when (or (not nosuffix)
+	    (elo-load-suffix-match-p library))
+    (let* ((load-suffixes (append elo-load-suffixes load-suffixes))
+	   (file (locate-file library
+			      (or path load-path)
+			      (append (unless nosuffix (get-load-suffixes))
+				      load-file-rep-suffixes))))
+      (and file
+	   (elo-load-suffix-match-p file)
+	   file))))
 
 (defun elo-tangle-file (elo &optional el)
-  (org-babel-tangle-file elo (or el (packed-source-file elo)) "emacs-lisp"))
-
-(defun elo-tangle-file*** (elo &optional nomessage noerror el)
   (unless el
     (setq el (packed-source-file elo)))
-  (when (or (not (file-exists-p el))
-	    (file-newer-than-file-p elo el))
-    (message "Loading %s (tangle)..." elo)
+  (let* ((org-export-inbuffer-options-extra '(("ELO_PROVIDE" :elo-provide)))
+	 (feature (plist-get (org-infile-export-plist) :elo-provide)))
     (org-babel-tangle-file elo el "emacs-lisp")
-    (message "Loading %s (tangle)...done" elo))
-  el)
+    (when feature
+      (with-temp-file el
+	(insert-file-contents el)
+	(goto-char (point-max))
+	(insert (format "\n(provide '%s)\n" (read feature)))))
+    ;; (auto-compile-byte-compile el elo-byte-compile)
+    ))
 
-
+(defun elo-tangle ()
+  (elo-tangle-file (buffer-file-name)))
 
 ;;;###autoload
 (define-minor-mode elo-auto-tangle-mode
-  ""
+  "Tangle Org Emacs Lisp files after the visiting buffers are saved.
+
+After a buffer visiting an Org Emacs Lisp file (.elo) is saved update the
+respective source file (.el) and possibly also the byte code file (.elc).
+
+This mode should be enabled globally, using it's globalized variant
+`elo-auto-tangle-global-mode'."
   :lighter elo-auto-tangle-mode-lighter
   :group 'elo
   (if elo-auto-tangle-mode
-      (add-hook  'after-save-hook 'elo-auto-tangle-file nil t)
-    (remove-hook 'after-save-hook 'elo-auto-tangle-file t))
-  ;; TODO mode-line
-  )
+      (add-hook  'after-save-hook 'elo-tangle nil t)
+    (remove-hook 'after-save-hook 'elo-tangle t)))
 
 ;;;###autoload
 (define-globalized-minor-mode elo-auto-tangle-global-mode
@@ -93,50 +138,11 @@
 
 (defun turn-on-elo-auto-tangle-mode ()
   (and (eq major-mode 'org-mode)
-       nil ; TODO .elo suffix
+       (string-match "\\.elo\\'" buffer-file-name)
        (elo-auto-tangle-mode 1)))
 
-(defvar elo-auto-tangle-mode-lighter " Elo" ; TODO none once done
+(defvar elo-auto-tangle-mode-lighter " Elo"
   "Mode lighter for Elo-Auto-Tangle Mode.")
-
-;; TODO all kinds of error handling
-(defun elo-auto-tangle-file ()
-  (let ((elo (buffer-file-name)))
-    (elo-tangle-file elo)))
-
-
-
-;; FIXME only suitable for require not load at the moment
-(defun elo-tangle-on-load (file &optional nosuffix path)
-  ;; To keep it simple we don't support files with no suffix.
-  (unless nosuffix
-    (let* ((elo (elo-locate-elo file path))
-	   (el (and elo (packed-source-file elo))))
-      ;; (message "elo-tangle-on-load")
-      ;; (message "  file: %s" file)
-      ;; (message "  el:   %s" el)
-      ;; (message "  elo:  %s" elo)
-      (when (and elo
-		 (file-exists-p elo)
-		 (or (not (file-exists-p el))
-		     (file-newer-than-file-p elo el)))
-	(condition-case nil
-	    (progn
-	      ;; TODO use a tempory file in case of failure?
-	      (message "Retangling %s..." elo)
-	      (elo-tangle-file elo el)
-	      (message "Retangling %s...done" elo))
-	  (error
-	   (message "Retangling %s...failed" elo)
-	   (elo-ding)))
-	(auto-compile-byte-compile el elo-byte-compile)))))
-
-(defun elo-load (file &optional noerror nomessage)
-  (load (elo-tangle-on-load file) noerror nomessage))
-
-(defun elo-require (feature &optional filename noerror path)
-  (elo-tangle-on-load (or filename (symbol-name feature)))
-  (require feature filename noerror))
 
 (define-minor-mode elo-tangle-on-load-mode
   "Before loading a library retangle it if it needs retangling."
@@ -158,12 +164,28 @@
 (defadvice load (before elo-tangle-on-load disable)
   ;; (file &optional noerror nomessage nosuffix must-suffix)
   "Before loading the library retangle it if needs to be retangled."
-  (elo-tangle-on-load file nosuffix))
+  (elo-tangle-on-load file nosuffix must-suffix))
 
 (defadvice require (before elo-tangle-on-load disable)
   ;; (feature &optional FILENAME NOERROR)
   "Before loading the library retangle it if needs to be retangled."
   (elo-tangle-on-load (or filename (symbol-name feature))))
+
+(defun elo-tangle-on-load (file &optional nosuffix must-suffix)
+  (when (or (and (not nosuffix)
+		 (not must-suffix))
+	    (elo-load-suffix-match-p file))
+    (let ((elo (elo-locate-elo file nosuffix))
+	  el)
+      (when (and elo
+		 (setq el (packed-source-file elo))
+		 (or (not (file-exists-p el))
+		     (file-newer-than-file-p elo el)))
+	(condition-case nil
+	    (elo-tangle-file elo el)
+	  (error
+	   (message "Cannot tangle on load: %s" elo)
+	   (elo-ding)))))))
 
 (defun elo-ding ()
   (and elo-ding (ding)))
