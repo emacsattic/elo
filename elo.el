@@ -37,8 +37,10 @@
 
 ;;; Code:
 
-(require 'auto-compile)
+(require 'auto-compile nil t)
 (require 'ob-tangle)
+
+;; (setq org-babel-tangle-comment-format-end "")
 
 (add-to-list 'auto-mode-alist '("\\.elo\\'" . org-mode))
 
@@ -50,7 +52,8 @@ source files (.el) and byte compiled files (.elc)."
   :prefix 'auto-compile)
 
 ;; TODO
-(defcustom elo-byte-compile 'update-or-start
+(defcustom elo-byte-compile
+  (if (featurep 'auto-compile) 'update-or-start nil)
   "Whether to byte compile generated Emacs lisp libraries."
   :group 'elo
   :type '(choice
@@ -101,21 +104,52 @@ a directory earlier in `load-path' return nil."
 	   file))))
 
 (defun elo-tangle-file (elo &optional el)
+  (interactive "fFile to tangle: \nP")
+  (let ((buf (get-file-buffer elo)))
+    (if (and buf
+	     (with-current-buffer buf
+	       elo-auto-tangle-mode))
+	(with-current-buffer buf
+	  (elo-tangle-1 elo el))
+      (when buf
+	(save-some-buffers nil (lambda () (eq (current-buffer) buf))))
+      (with-temp-buffer
+	(insert-file-contents elo)
+	(emacs-lisp-mode)
+	(elo-tangle-1 elo el)))))
+
+(defun elo-tangle ()
+  (elo-tangle-1 (buffer-file-name)))
+
+(defun elo-tangle-1 (elo &optional el)
   (unless el
     (setq el (packed-source-file elo)))
   (let* ((org-export-inbuffer-options-extra '(("ELO_PROVIDE" :elo-provide)))
-	 (feature (plist-get (org-infile-export-plist) :elo-provide)))
-    (org-babel-tangle-file elo el "emacs-lisp")
-    (when feature
+	 (feature (plist-get (org-infile-export-plist) :elo-provide))
+	 (blocks
+	  (mapcan (lambda (b)
+		    (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
+		      (list b)))
+		  (cdar (org-babel-tangle-collect-blocks "emacs-lisp")))))
+    (if (not blocks)
+	(ignore-errors (delete-file el))
       (with-temp-file el
-	(insert-file-contents el)
-	(goto-char (point-max))
-	(insert (format "\n(provide '%s)\n" (read feature)))))
-    ;; (auto-compile-byte-compile el elo-byte-compile)
-    ))
+	(emacs-lisp-mode)
+	(insert (format "\
+;;; %s ---
 
-(defun elo-tangle ()
-  (elo-tangle-file (buffer-file-name)))
+;; This file was tangled (generated) from ./%s.
+;;
+;; DO NOT EDIT.  Instead edit ./%s.
+"
+			(file-name-nondirectory el)
+			(file-name-nondirectory elo)
+			(file-name-nondirectory elo)))
+	(mapc 'org-babel-spec-to-string blocks)
+	(when feature
+	  (insert (format "\n(provide '%s)\n" (read feature)))))
+      ;; (auto-compile-byte-compile el elo-byte-compile)
+      )))
 
 ;;;###autoload
 (define-minor-mode elo-auto-tangle-mode
