@@ -172,6 +172,7 @@ This mode should be enabled globally, using it's globalized variant
 
 (defun turn-on-elo-auto-tangle-mode ()
   (and (eq major-mode 'org-mode)
+       buffer-file-name
        (string-match "\\.elo\\'" buffer-file-name)
        (elo-auto-tangle-mode 1)))
 
