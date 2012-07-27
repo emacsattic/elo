@@ -37,8 +37,14 @@
 
 ;;; Code:
 
+;; Civil Disobedience
+;; or we might just not use these: `mapcan'
+(require 'cl)
+
 (require 'auto-compile nil t)
 (require 'ob-tangle)
+
+(declare-function org-infile-export-plist "org-exp")
 
 ;; (setq org-babel-tangle-comment-format-end "")
 
@@ -48,8 +54,7 @@
   "Support for Org Emacs Lisp files.
 Org Emacs Lisp files (.elo) are a third kind of Emacs Lisp files besides
 source files (.el) and byte compiled files (.elc)."
-  :group 'convenience
-  :prefix 'auto-compile)
+  :group 'convenience)
 
 ;; TODO
 (defcustom elo-byte-compile
@@ -122,6 +127,7 @@ a directory earlier in `load-path' return nil."
   (elo-tangle-1 (buffer-file-name)))
 
 (defun elo-tangle-1 (elo &optional el)
+  (require 'org-exp)
   (unless el
     (setq el (packed-source-file elo)))
   (let* ((org-export-inbuffer-options-extra '(("ELO_PROVIDE" :elo-provide)))
