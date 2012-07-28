@@ -130,8 +130,8 @@ a directory earlier in `load-path' return nil."
   (require 'org-exp)
   (unless el
     (setq el (packed-source-file elo)))
-  (let* ((org-export-inbuffer-options-extra '(("ELO_PROVIDE" :elo-provide)))
-	 (feature (plist-get (org-infile-export-plist) :elo-provide))
+  (let* ((org-export-inbuffer-options-extra '(("PROVIDE" :provide)))
+	 (feature (plist-get (org-infile-export-plist) :provide))
 	 (blocks
 	  (mapcan (lambda (b)
 		    (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
