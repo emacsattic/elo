@@ -62,11 +62,11 @@ source files (.el) and byte compiled files (.elc)."
   "Whether to byte compile generated Emacs lisp libraries."
   :group 'elo
   :type '(choice
-	  (const :tag "Always compile" always)
-	  (const :tag "Compile when the .elc file already exists." update)
-	  (const :tag "Compile when .elc exists or .el is first created."
-		 update-or-start)
-	  (const :tag "Don't compile")))
+          (const :tag "Always compile" always)
+          (const :tag "Compile when the .elc file already exists." update)
+          (const :tag "Compile when .elc exists or .el is first created."
+                 update-or-start)
+          (const :tag "Don't compile")))
 
 (defcustom elo-ding t
   "Whether to beep (or flash the screen) when an error occurs.
@@ -98,30 +98,30 @@ set this variable to nil to disable even that."
 If no such library exists or if it is shadowed by an .el or .elc file in
 a directory earlier in `load-path' return nil."
   (when (or (not nosuffix)
-	    (elo-load-suffix-match-p library))
+            (elo-load-suffix-match-p library))
     (let* ((load-suffixes (append elo-load-suffixes load-suffixes))
-	   (file (locate-file library
-			      (or path load-path)
-			      (append (unless nosuffix (get-load-suffixes))
-				      load-file-rep-suffixes))))
+           (file (locate-file library
+                              (or path load-path)
+                              (append (unless nosuffix (get-load-suffixes))
+                                      load-file-rep-suffixes))))
       (and file
-	   (elo-load-suffix-match-p file)
-	   file))))
+           (elo-load-suffix-match-p file)
+           file))))
 
 (defun elo-tangle-file (elo &optional el)
   (interactive "fFile to tangle: \nP")
   (let ((buf (get-file-buffer elo)))
     (if (and buf
-	     (with-current-buffer buf
-	       elo-auto-tangle-mode))
-	(with-current-buffer buf
-	  (elo-tangle-1 elo el))
+             (with-current-buffer buf
+               elo-auto-tangle-mode))
+        (with-current-buffer buf
+          (elo-tangle-1 elo el))
       (when buf
-	(save-some-buffers nil (lambda () (eq (current-buffer) buf))))
+        (save-some-buffers nil (lambda () (eq (current-buffer) buf))))
       (with-temp-buffer
-	(insert-file-contents elo)
-	(emacs-lisp-mode)
-	(elo-tangle-1 elo el)))))
+        (insert-file-contents elo)
+        (emacs-lisp-mode)
+        (elo-tangle-1 elo el)))))
 
 (defun elo-tangle ()
   (elo-tangle-1 (buffer-file-name)))
@@ -131,29 +131,29 @@ a directory earlier in `load-path' return nil."
   (unless el
     (setq el (packed-source-file elo)))
   (let* ((org-export-inbuffer-options-extra '(("PROVIDE" :provide)))
-	 (feature (plist-get (org-infile-export-plist) :provide))
-	 (blocks
-	  (mapcan (lambda (b)
-		    (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
-		      (list b)))
-		  (cdar (org-babel-tangle-collect-blocks "emacs-lisp")))))
+         (feature (plist-get (org-infile-export-plist) :provide))
+         (blocks
+          (mapcan (lambda (b)
+                    (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
+                      (list b)))
+                  (cdar (org-babel-tangle-collect-blocks "emacs-lisp")))))
     (if (not blocks)
-	(ignore-errors (delete-file el))
+        (ignore-errors (delete-file el))
       (with-temp-file el
-	(emacs-lisp-mode)
-	(insert (format "\
+        (emacs-lisp-mode)
+        (insert (format "\
 ;;; %s ---
 
 ;; This file was tangled (generated) from ./%s.
 ;;
 ;; DO NOT EDIT.  Instead edit ./%s.
 "
-			(file-name-nondirectory el)
-			(file-name-nondirectory elo)
-			(file-name-nondirectory elo)))
-	(mapc 'org-babel-spec-to-string blocks)
-	(when feature
-	  (insert (format "\n(provide '%s)\n" (read feature)))))
+                        (file-name-nondirectory el)
+                        (file-name-nondirectory elo)
+                        (file-name-nondirectory elo)))
+        (mapc 'org-babel-spec-to-string blocks)
+        (when feature
+          (insert (format "\n(provide '%s)\n" (read feature)))))
       ;; (auto-compile-byte-compile el elo-byte-compile)
       )))
 
@@ -192,10 +192,10 @@ This mode should be enabled globally, using it's globalized variant
   :global t
   (if elo-tangle-on-load-mode
       (progn
-	(ad-enable-advice 'load    'before 'elo-tangle-on-load)
-	(ad-enable-advice 'require 'before 'elo-tangle-on-load)
-	(ad-activate 'load)
-	(ad-activate 'require))
+        (ad-enable-advice 'load    'before 'elo-tangle-on-load)
+        (ad-enable-advice 'require 'before 'elo-tangle-on-load)
+        (ad-activate 'load)
+        (ad-activate 'require))
     (ad-disable-advice 'load    'before 'elo-tangle-on-load)
     (ad-disable-advice 'require 'before 'elo-tangle-on-load)))
 
@@ -214,22 +214,25 @@ This mode should be enabled globally, using it's globalized variant
 
 (defun elo-tangle-on-load (file &optional nosuffix must-suffix)
   (when (or (and (not nosuffix)
-		 (not must-suffix))
-	    (elo-load-suffix-match-p file))
+                 (not must-suffix))
+            (elo-load-suffix-match-p file))
     (let ((elo (elo-locate-elo file nosuffix))
-	  el)
+          el)
       (when (and elo
-		 (setq el (packed-source-file elo))
-		 (or (not (file-exists-p el))
-		     (file-newer-than-file-p elo el)))
-	(condition-case nil
-	    (elo-tangle-file elo el)
-	  (error
-	   (message "Cannot tangle on load: %s" elo)
-	   (elo-ding)))))))
+                 (setq el (packed-source-file elo))
+                 (or (not (file-exists-p el))
+                     (file-newer-than-file-p elo el)))
+        (condition-case nil
+            (elo-tangle-file elo el)
+          (error
+           (message "Cannot tangle on load: %s" elo)
+           (elo-ding)))))))
 
 (defun elo-ding ()
   (and elo-ding (ding)))
 
 (provide 'elo)
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; elo.el ends here
