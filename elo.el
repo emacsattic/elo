@@ -4,7 +4,7 @@
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20120616
-;; Version: 0.0.1 (pre-alpha)
+;; Version: 0.0.2 (pre-alpha)
 ;; Homepage: http://tarsius.github.com/elo
 ;; Keywords: compile, convenience, lisp
 
