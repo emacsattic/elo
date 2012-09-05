@@ -126,31 +126,31 @@ file in a directory earlier in `load-path' return nil."
           (insert (format "\n(provide '%s)\n" (read feature))))))))
 
 ;;;###autoload
-(define-minor-mode elo-auto-tangle-mode
+(define-minor-mode elo-tangle-mode
   "Tangle Org Emacs Lisp files after the visiting buffers are saved.
 
 After a buffer visiting an Org Emacs Lisp file (.elo) is saved
 update the respective source file (.el).
 
 This mode should be enabled globally, using it's globalized
-variant `elo-auto-tangle-global-mode'."
-  :lighter elo-auto-tangle-mode-lighter
+variant `elo-tangle-on-save-mode'."
+  :lighter elo-tangle-mode-lighter
   :group 'elo
-  (if elo-auto-tangle-mode
+  (if elo-tangle-mode
       (add-hook  'after-save-hook 'elo-tangle nil t)
     (remove-hook 'after-save-hook 'elo-tangle t)))
 
 ;;;###autoload
-(define-globalized-minor-mode elo-auto-tangle-global-mode
-  elo-auto-tangle-mode turn-on-elo-auto-tangle-mode)
+(define-globalized-minor-mode elo-tangle-on-save-mode
+  elo-tangle-mode turn-on-elo-tangle-mode)
 
-(defun turn-on-elo-auto-tangle-mode ()
+(defun turn-on-elo-tangle-mode ()
   (and (eq major-mode 'org-mode)
        buffer-file-name
        (string-match "\\.elo\\'" buffer-file-name)
-       (elo-auto-tangle-mode 1)))
+       (elo-tangle-mode 1)))
 
-(defvar elo-auto-tangle-mode-lighter " Elo"
+(defvar elo-tangle-mode-lighter " Elo"
   "Mode lighter for Elo-Auto-Tangle Mode.")
 
 (define-minor-mode elo-tangle-on-load-mode
