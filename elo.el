@@ -99,7 +99,7 @@ file in a directory earlier in `load-path' return nil."
   (unless elo
     (setq elo (buffer-file-name)))
   (unless el
-    (setq el (packed-source-file elo)))
+    (setq el (packed-el-file elo)))
   (let* ((org-export-inbuffer-options-extra '(("PROVIDE" :provide)))
          (feature (plist-get (org-infile-export-plist) :provide))
          (blocks
@@ -187,7 +187,7 @@ variant `elo-tangle-on-save-mode'."
     (let ((elo (elo-locate-elo file nosuffix))
           el)
       (when (and elo
-                 (setq el (packed-source-file elo))
+                 (setq el (packed-el-file elo))
                  (or (not (file-exists-p el))
                      (file-newer-than-file-p elo el)))
         (condition-case nil
