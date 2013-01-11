@@ -83,6 +83,8 @@ file in a directory earlier in `load-path' return nil."
            (elo-load-suffix-match-p file)
            file))))
 
+(defvar elo-tangle-mode)
+
 (defun elo-tangle-file (elo &optional el)
   (interactive "fFile to tangle: \nP")
   (let ((visited-p (get-file-buffer (expand-file-name elo)))
