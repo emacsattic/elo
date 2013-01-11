@@ -4,8 +4,8 @@
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20120616
-;; Version: 0.0.1
-;; Homepage: http://tarsius.github.com/elo
+;; Version: 0.0.2
+;; Homepage: http://github.com/tarsius/elo
 ;; Keywords: compile, convenience, lisp
 
 ;; This file is not part of GNU Emacs.
@@ -28,6 +28,11 @@
 ;; Elo makes literate elisp programming easier.  Basically it adds
 ;; support for a third kind of elisp library files besides .el and
 ;; .elc: .elo.
+
+;; While this seemed like a good idea at first it ultimately led me
+;; declare .emacs bankruptcy and switch to just Custom.  Your milage
+;; might differ though, that's why I am making this available even
+;; though I don't plan to develop it any further.
 
 ;;; Code:
 
