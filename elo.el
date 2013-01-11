@@ -31,9 +31,7 @@
 
 ;;; Code:
 
-;; Civil Disobedience
-;; or we might just not use these: `mapcan'
-(require 'cl)
+(require 'cl-lib)
 
 (require 'ob-tangle)
 
@@ -105,10 +103,10 @@ file in a directory earlier in `load-path' return nil."
   (let* ((org-export-inbuffer-options-extra '(("PROVIDE" :provide)))
          (feature (plist-get (org-infile-export-plist) :provide))
          (blocks
-          (mapcan (lambda (b)
-                    (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
-                      (list b)))
-                  (cdar (org-babel-tangle-collect-blocks "emacs-lisp")))))
+          (cl-mapcan (lambda (b)
+                       (when (string= (cdr (assoc :tangle (nth 4 b))) "yes")
+                         (list b)))
+                     (cdar (org-babel-tangle-collect-blocks "emacs-lisp")))))
     (if (not blocks)
         (ignore-errors (delete-file el))
       (with-temp-file el
