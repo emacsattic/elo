@@ -1,9 +1,11 @@
-;;; elo.el --- [proof of concept] a require that tangles
+;;; elo.el --- a require that tangles
 
 ;; Copyright (C) 2012, 2017  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacsorphanage/elo
+
+;; Package-Requires: ((org "9"))
 ;; Keywords: compile, convenience, lisp
 
 ;; This file is not part of GNU Emacs.
@@ -26,6 +28,10 @@
 ;; Elo makes literate elisp programming easier.  Basically it adds
 ;; support for a third kind of elisp library files besides .el and
 ;; .elc: .elo.
+
+;; TODO make release and announce
+;; TODO post on http://emacs.stackexchange.com/questions/29214/org-based-init-method-slows-down-emacs-startup-dramaticlly-6-minute-startup-h
+;; TODO add to emacsmirror and melpa
 
 ;;; Code:
 
