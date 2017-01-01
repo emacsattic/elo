@@ -27,11 +27,6 @@
 ;; support for a third kind of elisp library files besides .el and
 ;; .elc: .elo.
 
-;; While this seemed like a good idea at first it ultimately led me
-;; declare .emacs bankruptcy and switch to just Custom.  Your milage
-;; might differ though, that's why I am making this available even
-;; though I don't plan to develop it any further.
-
 ;;; Code:
 
 (require 'cl-lib)
