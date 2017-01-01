@@ -1,11 +1,9 @@
 ;;; elo.el --- [proof of concept] a require that tangles
 
-;; Copyright (C) 2012  Jonas Bernoulli
+;; Copyright (C) 2012, 2017  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
-;; Created: 20120616
-;; Version: 0.0.2
-;; Homepage: http://github.com/tarsius/elo
+;; Homepage: https://github.com/emacsorphanage/elo
 ;; Keywords: compile, convenience, lisp
 
 ;; This file is not part of GNU Emacs.
